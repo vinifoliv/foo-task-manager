@@ -1,16 +1,25 @@
 #ifndef DATABASE_H
 #define DATABASE_H
 
-#include "list.h"
 #include "task.h"
 
-void db_init();
-void db_close();
-void db_create_task(const Task* Task);
-Task* db_list_task(int id);
-List* db_list_tasks();
-void db_check_task(int id);
-void db_uncheck_task(int id);
-void db_delete_task(int id);
+typedef enum {
+  QUERY_OK,
+  QUERY_ERROR,
+} QueryStatus;
+
+typedef struct {
+  QueryStatus status;
+  void* data;
+} QueryResult;
+
+QueryResult db_init();
+QueryResult db_close();
+QueryResult db_create_task(const Task* Task);
+QueryResult db_list_task(int id);
+QueryResult db_list_tasks();
+QueryResult db_check_task(int id);
+QueryResult db_uncheck_task(int id);
+QueryResult db_delete_task(int id);
 
 #endif

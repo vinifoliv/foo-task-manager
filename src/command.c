@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "database.h"
+#include "list.h"
 #include "task.h"
 
 static void print_tasks(const List* list) {
@@ -43,9 +44,17 @@ int run_command(int argc, const char** argv) {
 }
 
 int list(int argc, const char** argv) {
-  List* tasks = db_list_tasks();
+  QueryResult result = db_list_tasks();
+
+  if (result.status == QUERY_ERROR) {
+    return ERR_DATABASE;
+  }
+
+  List* tasks = (List*)result.data;
 
   print_tasks(tasks);
+
+  destroy_list(tasks);
 
   return 0;
 }
@@ -60,9 +69,13 @@ int add(int argc, const char** argv) {
 
   Task* task = create_task(task_title);
 
-  db_create_task(task);
+  QueryResult result = db_create_task(task);
 
   destroy_task(task);
+
+  if (result.status == QUERY_ERROR) {
+    return ERR_DATABASE;
+  }
 
   return 0;
 }
@@ -75,9 +88,11 @@ int check(int argc, const char** argv) {
 
   int id = atoi(argv[2]);
 
-  db_check_task(id);
+  QueryResult result = db_check_task(id);
 
-  db_close();
+  if (result.status == QUERY_ERROR) {
+    return ERR_DATABASE;
+  }
 
   return 0;
 }
@@ -90,16 +105,26 @@ int uncheck(int argc, const char** argv) {
 
   int id = atoi(argv[2]);
 
-  Task* task = db_list_task(id);
+  QueryResult result = db_list_task(id);
+
+  if (result.status == QUERY_ERROR) {
+    return ERR_DATABASE;
+  }
+
+  Task* task = (Task*)result.data;
 
   if (!task) {
     fprintf(stderr, "Not found.\n");
     return ERR_NOT_FOUND;
   }
 
-  db_uncheck_task(id);
-
   destroy_task(task);
+
+  result = db_uncheck_task(id);
+
+  if (result.status == QUERY_ERROR) {
+    return ERR_DATABASE;
+  }
 
   return 0;
 }
@@ -112,7 +137,13 @@ int del(int argc, const char** argv) {
 
   int id = atoi(argv[2]);
 
-  Task* task = db_list_task(id);
+  QueryResult result = db_list_task(id);
+
+  if (result.status == QUERY_ERROR) {
+    return ERR_DATABASE;
+  }
+
+  Task* task = (Task*)result.data;
 
   if (!task) {
     fprintf(stderr, "Not found.\n");
@@ -121,8 +152,11 @@ int del(int argc, const char** argv) {
 
   destroy_task(task);
 
-  db_delete_task(id);
-  db_close();
+  result = db_delete_task(id);
+
+  if (result.status == QUERY_ERROR) {
+    return ERR_DATABASE;
+  }
 
   return 0;
 }

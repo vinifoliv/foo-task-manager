@@ -4,6 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+/*
+ * Creates a Task object from all of its properties.
+ * The title is copied into the object.
+ * */
 Task* new_task(int id, const char* title, bool finished) {
   Task* task = malloc(sizeof(Task));
 

@@ -5,6 +5,7 @@
 
 #include "list.h"
 #include "sqlite3.h"
+#include "task.h"
 
 sqlite3* db = NULL;
 
@@ -50,9 +51,9 @@ void db_close() {
 }
 
 void db_create_task(const Task* task) {
-  sqlite3_stmt* stmt;
   const char* sql =
       "INSERT INTO task(title, description, finished) VALUES(?, ?, ?)";
+  sqlite3_stmt* stmt;
 
   sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
 
@@ -61,32 +62,74 @@ void db_create_task(const Task* task) {
   sqlite3_bind_int(stmt, 3, task->finished);
 
   sqlite3_step(stmt);
-
   sqlite3_finalize(stmt);
 }
 
 void db_check_task(int id) {
   sqlite3_stmt* stmt;
   const char* sql = "UPDATE task SET finished = TRUE WHERE id = ?";
-  int rc;
 
-  rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
-
-  if (rc != SQLITE_OK) {
+  if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
     fprintf(stderr, "Failed to check task: %s\n", sqlite3_errmsg(db));
     exit(1);
   }
 
   sqlite3_bind_int(stmt, 1, id);
-
   sqlite3_step(stmt);
-
   sqlite3_finalize(stmt);
+}
 
-  if (rc != SQLITE_OK) {
+void db_uncheck_task(int id) {
+  const char* sql = "UPDATE task SET finished = FALSE WHERE id = ?";
+  sqlite3_stmt* stmt;
+
+  if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
     fprintf(stderr, "Failed to check task: %s\n", sqlite3_errmsg(db));
     exit(1);
   }
+
+  sqlite3_bind_int(stmt, 1, id);
+  sqlite3_step(stmt);
+  sqlite3_finalize(stmt);
+}
+
+Task* db_list_task(int id) {
+  sqlite3_stmt* stmt;
+  const char* sql = "SELECT * FROM task WHERE id = ?";
+  Task* task = NULL;
+
+  if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+    fprintf(stderr, "Failed to prepare SQLite statement: %s\n",
+            sqlite3_errmsg(db));
+    exit(1);
+  }
+
+  if (sqlite3_bind_int(stmt, 1, id) != SQLITE_OK) {
+    fprintf(stderr, "Failed to bind parameters to SQLite statement: %s\n",
+            sqlite3_errmsg(db));
+    exit(1);
+  }
+
+  int rc = sqlite3_step(stmt);
+
+  if (rc == SQLITE_ROW) {
+    int id = sqlite3_column_int(stmt, 0);
+    const char* title = (char*)sqlite3_column_text(stmt, 1);
+    bool finished = sqlite3_column_int(stmt, 3);
+    sqlite3_finalize(stmt);
+
+    task = new_task(id, title, finished);
+    return task;
+  }
+
+  if (rc == SQLITE_DONE) {
+    sqlite3_finalize(stmt);
+    return task;
+  }
+
+  fprintf(stderr, "Failed to step through SQLite statement: %s\n",
+          sqlite3_errmsg(db));
+  exit(1);
 }
 
 List* db_list_tasks() {

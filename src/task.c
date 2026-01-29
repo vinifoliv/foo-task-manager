@@ -4,6 +4,21 @@
 #include <stdlib.h>
 #include <string.h>
 
+Task* new_task(int id, const char* title, bool finished) {
+  Task* task = malloc(sizeof(Task));
+
+  if (!task) {
+    fprintf(stderr, "Failed to create task.\n");
+    exit(1);
+  }
+
+  task->id = id;
+  strcpy(task->title, title);
+  task->finished = finished;
+
+  return task;
+}
+
 Task* create_task(const char* title) {
   Task* task = malloc(sizeof(Task));
 

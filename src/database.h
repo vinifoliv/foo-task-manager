@@ -7,8 +7,10 @@
 void db_init();
 void db_close();
 void db_create_task(const Task* Task);
+Task* db_list_task(int id);
 List* db_list_tasks();
 void db_check_task(int id);
+void db_uncheck_task(int id);
 void db_delete_task(int id);
 
 #endif

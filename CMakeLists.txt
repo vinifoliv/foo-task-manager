@@ -9,7 +9,6 @@ add_executable(foo)
 target_sources(foo PRIVATE
     src/main.c 
     src/task.c 
-    src/list.c 
     src/command.c
     src/database.c 
     src/sqlite3.c 

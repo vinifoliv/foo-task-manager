@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include "database.h"
-#include "list.h"
 #include "task.h"
 
 static void print_tasks(const List* list) {

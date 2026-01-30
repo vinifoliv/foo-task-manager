@@ -27,8 +27,13 @@ int run_command(int argc, const char** argv) {
 
   const char* command_name = argv[1];
 
+  if (argc == 2 && strcmp(command_name, "--help") == 0) {
+    printf("%s", general_help);
+    return 0;
+  }
+
   for (size_t i = 0; i < commands_count; ++i) {
-    const Command* command = &commands[i];
+    const Command* command = commands[i];
 
     if (strcmp(command->name, command_name) == 0 ||
         strcmp(command->alias, command_name) == 0) {
@@ -44,6 +49,11 @@ int run_command(int argc, const char** argv) {
 }
 
 int list(int argc, const char** argv) {
+  if (argc == 3 && strcmp(argv[2], "--help") == 0) {
+    printf("%s", list_command.help);
+    return 0;
+  }
+
   QueryResult result = db_list_tasks();
 
   if (result.status == QUERY_ERROR) {
@@ -63,6 +73,11 @@ int add(int argc, const char** argv) {
   if (argc < 3) {
     fprintf(stderr, "Missing task info.\n");
     return ERR_INVALID_ARGS;
+  }
+
+  if (strcmp(argv[2], "--help") == 0) {
+    printf("%s", add_command.help);
+    return 0;
   }
 
   const char* task_title = argv[2];
@@ -86,6 +101,11 @@ int check(int argc, const char** argv) {
     return ERR_INVALID_ARGS;
   }
 
+  if (strcmp(argv[2], "--help") == 0) {
+    printf("%s", check_command.help);
+    return 0;
+  }
+
   int id = atoi(argv[2]);
 
   QueryResult result = db_check_task(id);
@@ -101,6 +121,11 @@ int uncheck(int argc, const char** argv) {
   if (argc < 3) {
     fprintf(stderr, "Missing task ID.\n");
     return ERR_INVALID_ARGS;
+  }
+
+  if (strcmp(argv[2], "--help") == 0) {
+    printf("%s", uncheck_command.help);
+    return 0;
   }
 
   int id = atoi(argv[2]);
@@ -133,6 +158,11 @@ int del(int argc, const char** argv) {
   if (argc < 3) {
     fprintf(stderr, "Missing task ID.\n");
     return ERR_INVALID_ARGS;
+  }
+
+  if (strcmp(argv[2], "--help") == 0) {
+    printf("%s", del_command.help);
+    return 0;
   }
 
   int id = atoi(argv[2]);

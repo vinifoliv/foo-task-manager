@@ -13,7 +13,7 @@ static void print_tasks(const List* list) {
   for (size_t i = 0; i < list->size; ++i) {
     Task* task = &list->items[i];
 
-    printf("- %d. [%c] %s\n", task->id, task->finished ? 'x' : ' ',
+    printf("- % 3d. [%c] %s\n", task->id, task->finished ? 'x' : ' ',
            task->title);
   }
 }
@@ -21,14 +21,14 @@ static void print_tasks(const List* list) {
 int run_command(int argc, const char** argv) {
   if (argc == 1) {
     list(argc, argv);
-    return 0;
+    return COMM_OK;
   }
 
   const char* command_name = argv[1];
 
-  if (argc == 2 && strcmp(command_name, "--help") == 0) {
+  if (argc == 2 && strncmp(command_name, "--help", 6) == 0) {
     printf("%s", general_help);
-    return 0;
+    return COMM_OK;
   }
 
   for (size_t i = 0; i < commands_count; ++i) {
@@ -37,155 +37,173 @@ int run_command(int argc, const char** argv) {
     if (strcmp(command->name, command_name) == 0 ||
         strcmp(command->alias, command_name) == 0) {
       command->function(argc, argv);
-
-      return 0;
+      return COMM_OK;
     }
   }
 
   fprintf(stderr, "Unknown command '%s'.\n", command_name);
 
-  return ERR_INVALID_COMM;
+  return COMM_ERR_INVALID_COMM;
 }
 
 int list(int argc, const char** argv) {
-  if (argc == 3 && strcmp(argv[2], "--help") == 0) {
+  if (argc == 3 && strncmp(argv[2], "--help", 6) == 0) {
     printf("%s", list_command.help);
-    return 0;
+    return COMM_OK;
   }
 
-  QueryResult result = db_list_tasks();
+  Filter filter = {.done = false, .pending = false};
 
-  if (result.status == QUERY_ERROR) {
-    return ERR_DATABASE;
+  for (int i = 2; i < argc; ++i) {
+    if (strncmp(argv[i], "--help", 6) == 0) {
+      printf("%s", list_command.help);
+      return COMM_OK;
+    }
+
+    if (strncmp(argv[i], "--done", 6) == 0) {
+      filter.done = true;
+      break;
+    }
+
+    if (strncmp(argv[i], "--pending", 9) == 0) {
+      filter.pending = true;
+      break;
+    }
+
+    fprintf(stderr, "Unknown argument '%s'.\n", argv[i]);
+    return COMM_ERR_INVALID_ARGS;
   }
 
-  List* tasks = (List*)result.data;
+  List* tasks = create_list();
+
+  if (db_list_tasks(tasks, filter) != DB_OK) {
+    return COMM_ERR_DATABASE;
+  }
 
   print_tasks(tasks);
 
   destroy_list(tasks);
 
-  return 0;
+  return COMM_OK;
 }
 
 int add(int argc, const char** argv) {
   if (argc < 3) {
     fprintf(stderr, "Missing task info.\n");
-    return ERR_INVALID_ARGS;
+    return COMM_ERR_INVALID_ARGS;
   }
 
-  if (strcmp(argv[2], "--help") == 0) {
+  if (strncmp(argv[2], "--help", 6) == 0) {
     printf("%s", add_command.help);
-    return 0;
+    return COMM_OK;
   }
 
   const char* task_title = argv[2];
 
   Task* task = create_task(task_title);
 
-  QueryResult result = db_create_task(task);
+  if (db_create_task(task) != DB_OK) {
+    destroy_task(task);
+    return COMM_ERR_DATABASE;
+  }
 
   destroy_task(task);
 
-  if (result.status == QUERY_ERROR) {
-    return ERR_DATABASE;
-  }
-
-  return 0;
+  return COMM_OK;
 }
 
 int check(int argc, const char** argv) {
   if (argc < 3) {
     fprintf(stderr, "Missing task ID.\n");
-    return ERR_INVALID_ARGS;
+    return COMM_ERR_INVALID_ARGS;
   }
 
-  if (strcmp(argv[2], "--help") == 0) {
+  if (strncmp(argv[2], "--help", 6) == 0) {
     printf("%s", check_command.help);
-    return 0;
+    return COMM_OK;
   }
 
   int id = atoi(argv[2]);
+  Task task;
 
-  QueryResult result = db_check_task(id);
+  int rc = db_list_task(id, &task);
 
-  if (result.status == QUERY_ERROR) {
-    return ERR_DATABASE;
+  if (rc == DB_ERR) {
+    return COMM_ERR_DATABASE;
   }
 
-  return 0;
+  if (rc == DB_NOT_FOUND) {
+    fprintf(stderr, "Not found.\n");
+    return COMM_ERR_NOT_FOUND;
+  }
+
+  if (db_check_task(id) != DB_OK) {
+    return COMM_ERR_DATABASE;
+  }
+
+  return COMM_OK;
 }
 
 int uncheck(int argc, const char** argv) {
   if (argc < 3) {
     fprintf(stderr, "Missing task ID.\n");
-    return ERR_INVALID_ARGS;
+    return COMM_ERR_INVALID_ARGS;
   }
 
-  if (strcmp(argv[2], "--help") == 0) {
+  if (strncmp(argv[2], "--help", 6) == 0) {
     printf("%s", uncheck_command.help);
-    return 0;
+    return COMM_OK;
   }
 
   int id = atoi(argv[2]);
+  Task task;
 
-  QueryResult result = db_list_task(id);
+  int rc = db_list_task(id, &task);
 
-  if (result.status == QUERY_ERROR) {
-    return ERR_DATABASE;
+  if (rc == DB_ERR) {
+    return COMM_ERR_DATABASE;
   }
 
-  Task* task = (Task*)result.data;
-
-  if (!task) {
+  if (rc == DB_NOT_FOUND) {
     fprintf(stderr, "Not found.\n");
-    return ERR_NOT_FOUND;
+    return COMM_ERR_NOT_FOUND;
   }
 
-  destroy_task(task);
-
-  result = db_uncheck_task(id);
-
-  if (result.status == QUERY_ERROR) {
-    return ERR_DATABASE;
+  if (db_uncheck_task(id)) {
+    return COMM_ERR_DATABASE;
   }
 
-  return 0;
+  return COMM_OK;
 }
 
 int del(int argc, const char** argv) {
   if (argc < 3) {
     fprintf(stderr, "Missing task ID.\n");
-    return ERR_INVALID_ARGS;
+    return COMM_ERR_INVALID_ARGS;
   }
 
-  if (strcmp(argv[2], "--help") == 0) {
+  if (strncmp(argv[2], "--help", 6) == 0) {
     printf("%s", del_command.help);
-    return 0;
+    return COMM_OK;
   }
 
   int id = atoi(argv[2]);
+  Task task;
 
-  QueryResult result = db_list_task(id);
+  int rc = db_list_task(id, &task);
 
-  if (result.status == QUERY_ERROR) {
-    return ERR_DATABASE;
+  if (rc == DB_ERR) {
+    return COMM_ERR_DATABASE;
   }
 
-  Task* task = (Task*)result.data;
-
-  if (!task) {
+  if (rc == DB_NOT_FOUND) {
     fprintf(stderr, "Not found.\n");
-    return ERR_NOT_FOUND;
+    return COMM_ERR_NOT_FOUND;
   }
 
-  destroy_task(task);
-
-  result = db_delete_task(id);
-
-  if (result.status == QUERY_ERROR) {
-    return ERR_DATABASE;
+  if (db_delete_task(id) == DB_OK) {
+    return COMM_ERR_DATABASE;
   }
 
-  return 0;
+  return COMM_OK;
 }

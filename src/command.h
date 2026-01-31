@@ -4,12 +4,12 @@
 #include <stddef.h>
 
 typedef enum {
-  ERR_OK,
-  ERR_INVALID_COMM,
-  ERR_INVALID_ARGS,
-  ERR_NOT_FOUND,
-  ERR_DATABASE,
-} Error;
+  COMM_OK,
+  COMM_ERR_INVALID_COMM,
+  COMM_ERR_INVALID_ARGS,
+  COMM_ERR_NOT_FOUND,
+  COMM_ERR_DATABASE,
+} CommandStatus;
 
 typedef int (*CommandFunction)(int argc, const char** argv);
 

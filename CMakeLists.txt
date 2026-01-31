@@ -11,5 +11,6 @@ target_sources(foo PRIVATE
     src/task.c 
     src/command.c
     src/database.c 
+    src/query_builder.c
     src/sqlite3.c 
 )

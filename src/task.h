@@ -5,10 +5,11 @@
 #include <stddef.h>
 
 #define LIST_INIT_CAP 8
+#define TASK_TITLE_SIZE 255
 
 typedef struct {
   int id;
-  char title[255];
+  char title[TASK_TITLE_SIZE];
   bool finished;
 } Task;
 

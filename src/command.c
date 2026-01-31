@@ -52,9 +52,31 @@ int list(int argc, const char** argv) {
     return COMM_OK;
   }
 
+  Filter filter = {.done = false, .pending = false};
+
+  for (int i = 2; i < argc; ++i) {
+    if (strncmp(argv[i], "--help", 6) == 0) {
+      printf("%s", list_command.help);
+      return COMM_OK;
+    }
+
+    if (strncmp(argv[i], "--done", 6) == 0) {
+      filter.done = true;
+      break;
+    }
+
+    if (strncmp(argv[i], "--pending", 9) == 0) {
+      filter.pending = true;
+      break;
+    }
+
+    fprintf(stderr, "Unknown argument '%s'.\n", argv[i]);
+    return COMM_ERR_INVALID_ARGS;
+  }
+
   List* tasks = create_list();
 
-  if (db_list_tasks(tasks) != DB_OK) {
+  if (db_list_tasks(tasks, filter) != DB_OK) {
     return COMM_ERR_DATABASE;
   }
 

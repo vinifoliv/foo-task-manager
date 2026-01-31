@@ -4,11 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define SQL_INIT_SIZE 256
+#define SQL_INIT_SIZE 255
 #define AND_SIZE 5
 #define OR_SIZE 4
 
-static QueryBuilderStatus qb_grow_sql(QueryBuilder* qb) {
+static int qb_grow_sql(QueryBuilder* qb) {
   if (!qb->sql) {
     fprintf(stderr, "The query builder SQL has not been initialized.\n");
     return QB_ERR_MEM;
@@ -25,7 +25,13 @@ static QueryBuilderStatus qb_grow_sql(QueryBuilder* qb) {
   return QB_OK;
 }
 
-QueryBuilderStatus qb_init(QueryBuilder* qb) {
+static char* qb_at_sql_end(QueryBuilder* qb) { return qb->sql + qb->size; }
+
+static size_t qb_remaining_sql(QueryBuilder* qb) {
+  return qb->max_size - qb->size;
+}
+
+int qb_init(QueryBuilder* qb) {
   char* sql = malloc(SQL_INIT_SIZE * sizeof(char));
 
   if (!sql) {
@@ -42,34 +48,54 @@ QueryBuilderStatus qb_init(QueryBuilder* qb) {
 
 void qb_destroy(QueryBuilder* qb) { free(qb->sql); }
 
-QueryBuilderStatus qb_and(QueryBuilder* qb) {
-  if (!strstr(qb->sql, "WHERE")) {
+int qb_clause(QueryBuilder* qb, const char* clause) {
+  if (strstr(qb->sql, ";")) {
+    fprintf(stderr, "Cannot add clause to SQL with ';'.\n");
     return QB_ERR_SYNTAX;
   }
 
-  if (qb->size + AND_SIZE > qb->size) {
+  if (strlen(clause) > qb_remaining_sql(qb)) {
     int rc = qb_grow_sql(qb);
     if (rc != QB_OK) return rc;
   }
 
-  qb->size +=
-      snprintf(qb->sql + qb->size, qb->max_size - qb->size, "%s", " AND ");
+  qb->size += snprintf(qb_at_sql_end(qb), qb_remaining_sql(qb), "%s", clause);
 
   return QB_OK;
 }
 
-QueryBuilderStatus qb_or(QueryBuilder* qb) {
+int qb_and(QueryBuilder* qb) {
   if (!strstr(qb->sql, "WHERE")) {
+    fprintf(stderr, "Cannot append AND to statements missing WHERE.\n");
     return QB_ERR_SYNTAX;
   }
 
-  if (qb->size + OR_SIZE > qb->size) {
+  size_t new_size = qb->size + AND_SIZE;
+
+  if (new_size > qb_remaining_sql(qb)) {
     int rc = qb_grow_sql(qb);
     if (rc != QB_OK) return rc;
   }
 
-  qb->size +=
-      snprintf(qb->sql + qb->size, qb->max_size - qb->size, "%s", " OR ");
+  qb->size += snprintf(qb_at_sql_end(qb), qb_remaining_sql(qb), "%s", " AND ");
+
+  return QB_OK;
+}
+
+int qb_or(QueryBuilder* qb) {
+  if (!strstr(qb->sql, "WHERE")) {
+    fprintf(stderr, "Cannot append OR to statements missing WHERE.\n");
+    return QB_ERR_SYNTAX;
+  }
+
+  size_t new_size = qb->size + OR_SIZE;
+
+  if (new_size > qb_remaining_sql(qb)) {
+    int rc = qb_grow_sql(qb);
+    if (rc != QB_OK) return rc;
+  }
+
+  qb->size += snprintf(qb_at_sql_end(qb), qb_remaining_sql(qb), "%s", " OR ");
 
   return QB_OK;
 }

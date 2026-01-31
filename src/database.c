@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "query_builder.h"
 #include "sqlite3.h"
 #include "task.h"
 
@@ -213,13 +214,29 @@ cleanup:
   return status;
 }
 
-QueryStatus db_list_tasks(List* tasks) {
+QueryStatus db_list_tasks(List* tasks, Filter filter) {
   QueryStatus status = DB_ERR;
+  QueryBuilder qb;
 
-  const char* sql = "SELECT * FROM task";
+  if (qb_init(&qb) != QB_OK) goto cleanup;
+  if (qb_clause(&qb, "SELECT * FROM task ") != QB_OK) goto cleanup;
+
+  if (filter.done && filter.pending) {
+    fprintf(stderr, "Cannot filter by done and pending at the same time.\n");
+    goto cleanup;
+  }
+
+  if (filter.done) {
+    if (qb_clause(&qb, "WHERE finished = TRUE") != QB_OK) goto cleanup;
+  }
+
+  if (filter.pending) {
+    if (qb_clause(&qb, "WHERE finished = FALSE") != QB_OK) goto cleanup;
+  }
+
   sqlite3_stmt* stmt = NULL;
 
-  if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+  if (sqlite3_prepare_v2(db, qb.sql, -1, &stmt, NULL) != SQLITE_OK) {
     fprintf(stderr, "Failed to prepare SQLite statement: %s.\n",
             sqlite3_errmsg(db));
     goto cleanup;
@@ -245,12 +262,14 @@ QueryStatus db_list_tasks(List* tasks) {
   }
 
   finalize_stmt(stmt);
+  qb_destroy(&qb);
 
   status = DB_OK;
   return status;
 
 cleanup:
   finalize_stmt(stmt);
+  qb_destroy(&qb);
   return status;
 }
 

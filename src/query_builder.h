@@ -13,12 +13,14 @@ typedef enum {
   QB_OK,
   QB_ERR_MEM,
   QB_ERR_SYNTAX,
+  QB_ERR_SQLLEN,
   QB_ERR_UNK
 } QueryBuilderStatus;
 
-QueryBuilderStatus qb_init(QueryBuilder* qb);
+int qb_init(QueryBuilder* qb);
 void qb_destroy(QueryBuilder* qb);
-QueryBuilderStatus qb_and(QueryBuilder* qb);
-QueryBuilderStatus qb_or(QueryBuilder* qb);
+int qb_clause(QueryBuilder* qb, const char* clause);
+int qb_and(QueryBuilder* qb);
+int qb_or(QueryBuilder* qb);
 
 #endif

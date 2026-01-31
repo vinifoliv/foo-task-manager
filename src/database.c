@@ -182,7 +182,7 @@ QueryStatus db_list_tasks(List* tasks) {
   while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
     int id = sqlite3_column_int(stmt, 0);
 
-    const char title[TASK_TITLE_SIZE];
+    char title[TASK_TITLE_SIZE] = "";
     strncpy(title, (char*)sqlite3_column_text(stmt, 1), TASK_TITLE_SIZE);
 
     bool finished = sqlite3_column_int(stmt, 3);

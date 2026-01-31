@@ -26,7 +26,7 @@ int run_command(int argc, const char** argv) {
 
   const char* command_name = argv[1];
 
-  if (argc == 2 && strcmp(command_name, "--help") == 0) {
+  if (argc == 2 && strncmp(command_name, "--help", 6) == 0) {
     printf("%s", general_help);
     return COMM_OK;
   }
@@ -37,7 +37,6 @@ int run_command(int argc, const char** argv) {
     if (strcmp(command->name, command_name) == 0 ||
         strcmp(command->alias, command_name) == 0) {
       command->function(argc, argv);
-
       return COMM_OK;
     }
   }
@@ -48,7 +47,7 @@ int run_command(int argc, const char** argv) {
 }
 
 int list(int argc, const char** argv) {
-  if (argc == 3 && strcmp(argv[2], "--help") == 0) {
+  if (argc == 3 && strncmp(argv[2], "--help", 6) == 0) {
     printf("%s", list_command.help);
     return COMM_OK;
   }
@@ -72,7 +71,7 @@ int add(int argc, const char** argv) {
     return COMM_ERR_INVALID_ARGS;
   }
 
-  if (strcmp(argv[2], "--help") == 0) {
+  if (strncmp(argv[2], "--help", 6) == 0) {
     printf("%s", add_command.help);
     return COMM_OK;
   }
@@ -97,7 +96,7 @@ int check(int argc, const char** argv) {
     return COMM_ERR_INVALID_ARGS;
   }
 
-  if (strcmp(argv[2], "--help") == 0) {
+  if (strncmp(argv[2], "--help", 6) == 0) {
     printf("%s", check_command.help);
     return COMM_OK;
   }
@@ -129,7 +128,7 @@ int uncheck(int argc, const char** argv) {
     return COMM_ERR_INVALID_ARGS;
   }
 
-  if (strcmp(argv[2], "--help") == 0) {
+  if (strncmp(argv[2], "--help", 6) == 0) {
     printf("%s", uncheck_command.help);
     return COMM_OK;
   }
@@ -161,7 +160,7 @@ int del(int argc, const char** argv) {
     return COMM_ERR_INVALID_ARGS;
   }
 
-  if (strcmp(argv[2], "--help") == 0) {
+  if (strncmp(argv[2], "--help", 6) == 0) {
     printf("%s", del_command.help);
     return COMM_OK;
   }

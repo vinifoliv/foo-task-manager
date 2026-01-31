@@ -13,7 +13,12 @@ static void finalize_stmt(sqlite3_stmt* stmt) {
 }
 
 QueryStatus db_init() {
-  if (db) return DB_OK;
+  QueryStatus status = DB_ERR;
+
+  if (db) {
+    status = DB_OK;
+    return status;
+  }
 
   char* err;
   const char* sql =
@@ -23,33 +28,58 @@ QueryStatus db_init() {
       "description VARCHAR(255),"
       "finished BOOLEAN DEFAULT FALSE,"
       "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)";
+  sqlite3_stmt* stmt = NULL;
 
   if (sqlite3_open("foo.db", &db) != SQLITE_OK) {
     fprintf(stderr, "Failed to open the database: %s.\n", sqlite3_errmsg(db));
-    return DB_ERR;
+    goto cleanup;
   }
 
-  if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
-    fprintf(stderr, "SQL error: %s\n", err);
-    sqlite3_free(err);
-    return DB_ERR;
+  if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+    fprintf(stderr, "Failed to prepare SQLite statement: %s.\n",
+            sqlite3_errmsg(db));
+    goto cleanup;
   }
 
-  return DB_OK;
+  if (sqlite3_step(stmt) != SQLITE_DONE) {
+    fprintf(stderr, "Failed to step through SQLite statement: %s.\n",
+            sqlite3_errmsg(db));
+    goto cleanup;
+  }
+
+  finalize_stmt(stmt);
+
+  status = DB_OK;
+  return status;
+
+cleanup:
+  finalize_stmt(stmt);
+  if (db) db = NULL;
+  return status;
 }
 
 QueryStatus db_close() {
-  if (!db) return DB_OK;
+  QueryStatus status = DB_ERR;
+
+  if (!db) {
+    status = DB_OK;
+    return status;
+  }
 
   if (sqlite3_close(db) != SQLITE_OK) {
     fprintf(stderr, "Failed to close database: %s.\n", sqlite3_errmsg(db));
-    return DB_ERR;
+    return status;
   }
 
-  return DB_OK;
+  db = NULL;
+
+  status = DB_OK;
+  return status;
 }
 
 QueryStatus db_create_task(const Task* task) {
+  QueryStatus status = DB_ERR;
+
   const char* sql =
       "INSERT INTO task(title, description, finished) VALUES(?, ?, ?)";
   sqlite3_stmt* stmt = NULL;
@@ -57,7 +87,7 @@ QueryStatus db_create_task(const Task* task) {
   if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
     fprintf(stderr, "Failed to prepare SQLite statement: %s.\n",
             sqlite3_errmsg(db));
-    return DB_ERR;
+    goto cleanup;
   }
 
   sqlite3_bind_text(stmt, 1, task->title, -1, SQLITE_TRANSIENT);
@@ -67,15 +97,22 @@ QueryStatus db_create_task(const Task* task) {
   if (sqlite3_step(stmt) != SQLITE_DONE) {
     fprintf(stderr, "Failed to step through SQLite statement: %s.\n",
             sqlite3_errmsg(db));
-    return DB_ERR;
+    goto cleanup;
   }
 
   finalize_stmt(stmt);
 
-  return DB_OK;
+  status = DB_OK;
+  return status;
+
+cleanup:
+  finalize_stmt(stmt);
+  return status;
 }
 
 QueryStatus db_check_task(int id) {
+  QueryStatus status = DB_ERR;
+
   const char* sql = "UPDATE task SET finished = TRUE WHERE id = ?";
   sqlite3_stmt* stmt = NULL;
 
@@ -95,14 +132,17 @@ QueryStatus db_check_task(int id) {
 
   finalize_stmt(stmt);
 
-  return DB_OK;
+  status = DB_OK;
+  return status;
 
 cleanup:
-  if (stmt) finalize_stmt(stmt);
-  return DB_ERR;
+  finalize_stmt(stmt);
+  return status;
 }
 
 QueryStatus db_uncheck_task(int id) {
+  QueryStatus status = DB_ERR;
+
   const char* sql = "UPDATE task SET finished = FALSE WHERE id = ?";
   sqlite3_stmt* stmt = NULL;
 
@@ -122,14 +162,17 @@ QueryStatus db_uncheck_task(int id) {
 
   finalize_stmt(stmt);
 
-  return DB_OK;
+  status = DB_OK;
+  return status;
 
 cleanup:
-  if (stmt) finalize_stmt(stmt);
-  return DB_ERR;
+  finalize_stmt(stmt);
+  return status;
 }
 
 QueryStatus db_list_task(int id, Task* task) {
+  QueryStatus status = DB_ERR;
+
   const char* sql = "SELECT * FROM task WHERE id = ?";
   sqlite3_stmt* stmt = NULL;
 
@@ -145,17 +188,20 @@ QueryStatus db_list_task(int id, Task* task) {
 
   if (rc == SQLITE_DONE) {
     finalize_stmt(stmt);
-    return DB_NOT_FOUND;
+    status = DB_NOT_FOUND;
+    return status;
   }
 
   if (rc == SQLITE_ROW) {
     task->id = sqlite3_column_int(stmt, 0);
-    strncpy(task->title, (char*)sqlite3_column_text(stmt, 1), TASK_TITLE_SIZE);
+    snprintf(task->title, TASK_TITLE_SIZE, "%s",
+             (char*)sqlite3_column_text(stmt, 1));
     task->finished = sqlite3_column_int(stmt, 3);
 
     finalize_stmt(stmt);
 
-    return DB_OK;
+    status = DB_OK;
+    return status;
   }
 
   fprintf(stderr, "Failed to step through SQLite statement: %s.\n",
@@ -163,11 +209,13 @@ QueryStatus db_list_task(int id, Task* task) {
   goto cleanup;
 
 cleanup:
-  if (stmt) finalize_stmt(stmt);
-  return DB_ERR;
+  finalize_stmt(stmt);
+  return status;
 }
 
 QueryStatus db_list_tasks(List* tasks) {
+  QueryStatus status = DB_ERR;
+
   const char* sql = "SELECT * FROM task";
   sqlite3_stmt* stmt = NULL;
 
@@ -198,14 +246,17 @@ QueryStatus db_list_tasks(List* tasks) {
 
   finalize_stmt(stmt);
 
-  return DB_OK;
+  status = DB_OK;
+  return status;
 
 cleanup:
-  if (stmt) finalize_stmt(stmt);
-  return DB_ERR;
+  finalize_stmt(stmt);
+  return status;
 }
 
 QueryStatus db_delete_task(int id) {
+  QueryStatus status = DB_ERR;
+
   const char* sql = "DELETE FROM task WHERE id = ?";
   sqlite3_stmt* stmt = NULL;
 
@@ -225,9 +276,10 @@ QueryStatus db_delete_task(int id) {
 
   finalize_stmt(stmt);
 
-  return DB_OK;
+  status = DB_OK;
+  return status;
 
 cleanup:
-  if (stmt) finalize_stmt(stmt);
-  return DB_ERR;
+  finalize_stmt(stmt);
+  return status;
 }

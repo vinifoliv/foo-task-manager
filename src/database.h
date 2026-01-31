@@ -4,22 +4,18 @@
 #include "task.h"
 
 typedef enum {
-  QUERY_OK,
-  QUERY_ERROR,
+  DB_OK,
+  DB_NOT_FOUND,
+  DB_ERR,
 } QueryStatus;
 
-typedef struct {
-  QueryStatus status;
-  void* data;
-} QueryResult;
-
-QueryResult db_init();
-QueryResult db_close();
-QueryResult db_create_task(const Task* Task);
-QueryResult db_list_task(int id);
-QueryResult db_list_tasks();
-QueryResult db_check_task(int id);
-QueryResult db_uncheck_task(int id);
-QueryResult db_delete_task(int id);
+QueryStatus db_init();
+QueryStatus db_close();
+QueryStatus db_create_task(const Task* task);
+QueryStatus db_list_task(int id, Task* task);
+QueryStatus db_list_tasks(List* tasks);
+QueryStatus db_check_task(int id);
+QueryStatus db_uncheck_task(int id);
+QueryStatus db_delete_task(int id);
 
 #endif

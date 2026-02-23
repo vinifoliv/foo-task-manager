@@ -4,98 +4,85 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define SQL_INIT_SIZE 255
-#define AND_SIZE 5
-#define OR_SIZE 4
+#define BUFFER_INITIAL_CAPACITY 255
+#define SPACEMENT_SIZE 2
+#define AND "AND"
+#define OR "OR"
 
-static int qb_grow_sql(QueryBuilder* qb) {
-  if (!qb->sql) {
-    fprintf(stderr, "The query builder SQL has not been initialized.\n");
-    return QB_ERR_MEM;
+static int qb_grow_buffer(QueryBuilder* qb) {
+  if (!qb->buffer) {
+    fprintf(stderr, "Query builder buffer has not been initialized.\n");
+    return QB_ERROR;
   }
 
-  char* buf = strdup(qb->sql);
+  char* buf = strdup(qb->buffer);
 
-  size_t new_size = qb->max_size * 2;
-  qb->sql = realloc(qb->sql, new_size);
-  strcpy(qb->sql, buf);
+  size_t new_capacity = qb->capacity * 2;
+  qb->buffer = realloc(qb->buffer, new_capacity);
+
+  if (!qb->buffer) {
+    fprintf(stderr, "Failed to grow query builder buffer.\n");
+    return QB_ERROR;
+  }
+
+  qb->capacity = new_capacity;
+  strncpy(qb->buffer, buf, qb->size);
 
   free(buf);
 
   return QB_OK;
 }
 
-static char* qb_at_sql_end(QueryBuilder* qb) { return qb->sql + qb->size; }
+static char* qb_buffer_end(QueryBuilder* qb) { return qb->buffer + qb->size; }
 
-static size_t qb_remaining_sql(QueryBuilder* qb) {
-  return qb->max_size - qb->size;
+static size_t qb_available_space(QueryBuilder* qb) {
+  return qb->capacity - qb->size;
+}
+
+static int qb_add_to_buffer(QueryBuilder* qb, const char* value) {
+  if (!qb->buffer) {
+    fprintf(stderr, "Query builder buffer has not been initialized.\n");
+    return QB_ERROR;
+  }
+
+  size_t new_size = qb->size + SPACEMENT_SIZE + strlen(value);
+
+  if (new_size > qb_available_space(qb)) {
+    int rc = qb_grow_buffer(qb);
+    if (rc != QB_OK) return rc;
+  }
+
+  qb->size +=
+      snprintf(qb_buffer_end(qb), qb_available_space(qb), " %s ", value);
+
+  return QB_OK;
 }
 
 int qb_init(QueryBuilder* qb) {
-  char* sql = malloc(SQL_INIT_SIZE * sizeof(char));
+  char* buffer = malloc(BUFFER_INITIAL_CAPACITY * sizeof(char));
 
-  if (!sql) {
-    fprintf(stderr, "Failed to malloc for SQL string.\n");
-    return QB_ERR_MEM;
+  if (!buffer) {
+    fprintf(stderr, "Failed to malloc query builder buffer.\n");
+    return QB_ERROR;
   }
 
-  qb->sql = sql;
+  qb->buffer = buffer;
   qb->size = 0;
-  qb->max_size = SQL_INIT_SIZE;
+  qb->capacity = BUFFER_INITIAL_CAPACITY;
 
   return QB_OK;
 }
 
-void qb_destroy(QueryBuilder* qb) { free(qb->sql); }
+void qb_destroy(QueryBuilder* qb) {
+  if (!qb->buffer) {
+    free(qb->buffer);
+  }
+}
 
 int qb_clause(QueryBuilder* qb, const char* clause) {
-  if (strstr(qb->sql, ";")) {
-    fprintf(stderr, "Cannot add clause to SQL with ';'.\n");
-    return QB_ERR_SYNTAX;
-  }
-
-  if (strlen(clause) > qb_remaining_sql(qb)) {
-    int rc = qb_grow_sql(qb);
-    if (rc != QB_OK) return rc;
-  }
-
-  qb->size += snprintf(qb_at_sql_end(qb), qb_remaining_sql(qb), "%s", clause);
-
-  return QB_OK;
+  return qb_add_to_buffer(qb, clause);
 }
 
-int qb_and(QueryBuilder* qb) {
-  if (!strstr(qb->sql, "WHERE")) {
-    fprintf(stderr, "Cannot append AND to statements missing WHERE.\n");
-    return QB_ERR_SYNTAX;
-  }
+int qb_and(QueryBuilder* qb) { return qb_add_to_buffer(qb, AND); }
 
-  size_t new_size = qb->size + AND_SIZE;
-
-  if (new_size > qb_remaining_sql(qb)) {
-    int rc = qb_grow_sql(qb);
-    if (rc != QB_OK) return rc;
-  }
-
-  qb->size += snprintf(qb_at_sql_end(qb), qb_remaining_sql(qb), "%s", " AND ");
-
-  return QB_OK;
-}
-
-int qb_or(QueryBuilder* qb) {
-  if (!strstr(qb->sql, "WHERE")) {
-    fprintf(stderr, "Cannot append OR to statements missing WHERE.\n");
-    return QB_ERR_SYNTAX;
-  }
-
-  size_t new_size = qb->size + OR_SIZE;
-
-  if (new_size > qb_remaining_sql(qb)) {
-    int rc = qb_grow_sql(qb);
-    if (rc != QB_OK) return rc;
-  }
-
-  qb->size += snprintf(qb_at_sql_end(qb), qb_remaining_sql(qb), "%s", " OR ");
-
-  return QB_OK;
-}
+int qb_or(QueryBuilder* qb) { return qb_add_to_buffer(qb, OR); }

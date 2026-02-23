@@ -4,22 +4,20 @@
 #include <stddef.h>
 
 typedef struct {
-  char* sql;
+  char* buffer;
   size_t size;
-  size_t max_size;
+  size_t capacity;
 } QueryBuilder;
 
 typedef enum {
   QB_OK,
-  QB_ERR_MEM,
-  QB_ERR_SYNTAX,
-  QB_ERR_SQLLEN,
-  QB_ERR_UNK
+  QB_ERROR,
 } QueryBuilderStatus;
 
 int qb_init(QueryBuilder* qb);
 void qb_destroy(QueryBuilder* qb);
 int qb_clause(QueryBuilder* qb, const char* clause);
+int qb_from(QueryBuilder* qb, const char* table);
 int qb_and(QueryBuilder* qb);
 int qb_or(QueryBuilder* qb);
 

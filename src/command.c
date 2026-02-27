@@ -42,21 +42,34 @@ int list(int argc, const char** argv) {
     return COMM_OK;
   }
 
-  Filter filter = {.done = false, .pending = false};
+  Filter filter = {.done = false, .pending = false, .title = NULL};
 
   for (int i = 2; i < argc; ++i) {
-    if (strncmp(argv[i], "--help", 6) == 0) {
+    const char* argument = argv[i];
+
+    if (strncmp(argument, "--help", 6) == 0) {
       printf("%s", list_command.help);
       return COMM_OK;
     }
 
-    if (strncmp(argv[i], "--done", 6) == 0) {
+    if (strncmp(argument, "--done", 6) == 0) {
       filter.done = true;
       break;
     }
 
-    if (strncmp(argv[i], "--pending", 9) == 0) {
+    if (strncmp(argument, "--pending", 9) == 0) {
       filter.pending = true;
+      break;
+    }
+
+    if (strncmp(argument, "--title", 5) == 0) {
+      if (i == argc - 1) {
+        fprintf(stderr, "Title filter not specified.\n");
+        return COMM_ERR_INVALID_ARGS;
+      }
+
+      filter.title = argv[++i];
+
       break;
     }
 

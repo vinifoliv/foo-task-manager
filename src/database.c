@@ -204,12 +204,16 @@ int db_list_tasks(List* tasks, Filter filter) {
     goto cleanup;
   }
 
-  if (filter.done) {
-    if (qb_clause(&qb, "WHERE finished = TRUE") != QB_OK) goto cleanup;
+  if (filter.done && qb_where(&qb, "finished = TRUE") != QB_OK) {
+    goto cleanup;
   }
 
-  if (filter.pending) {
-    if (qb_clause(&qb, "WHERE finished = FALSE") != QB_OK) goto cleanup;
+  if (filter.pending && qb_where(&qb, "finished = FALSE") != QB_OK) {
+    goto cleanup;
+  }
+
+  if (filter.title && qb_where(&qb, "title LIKE '%' || ? || '%'") != QB_OK) {
+    goto cleanup;
   }
 
   sqlite3_stmt* stmt = NULL;
@@ -218,6 +222,10 @@ int db_list_tasks(List* tasks, Filter filter) {
     fprintf(stderr, "Failed to prepare SQLite statement: %s.\n",
             sqlite3_errmsg(db));
     goto cleanup;
+  }
+
+  if (filter.title) {
+    sqlite3_bind_text(stmt, 1, filter.title, -1, SQLITE_TRANSIENT);
   }
 
   int rc;

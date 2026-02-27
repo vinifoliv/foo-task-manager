@@ -12,6 +12,7 @@ typedef enum {
 typedef struct {
   bool done;
   bool pending;
+  const char* title;
 } Filter;
 
 int db_init();

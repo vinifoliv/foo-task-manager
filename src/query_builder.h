@@ -18,6 +18,7 @@ int qb_init(QueryBuilder* qb);
 void qb_destroy(QueryBuilder* qb);
 int qb_clause(QueryBuilder* qb, const char* clause);
 int qb_from(QueryBuilder* qb, const char* table);
+int qb_where(QueryBuilder* qb, const char* condition);
 int qb_and(QueryBuilder* qb);
 int qb_or(QueryBuilder* qb);
 

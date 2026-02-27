@@ -6,6 +6,7 @@
 
 #define BUFFER_INITIAL_CAPACITY 255
 #define SPACEMENT_SIZE 2
+#define WHERE "WHERE"
 #define AND "AND"
 #define OR "OR"
 
@@ -81,6 +82,14 @@ void qb_destroy(QueryBuilder* qb) {
 
 int qb_clause(QueryBuilder* qb, const char* clause) {
   return qb_add_to_buffer(qb, clause);
+}
+
+int qb_where(QueryBuilder* qb, const char* condition) {
+  int rc = qb_add_to_buffer(qb, WHERE) != QB_OK;
+
+  if (rc != QB_OK) return rc;
+
+  return qb_add_to_buffer(qb, condition);
 }
 
 int qb_and(QueryBuilder* qb) { return qb_add_to_buffer(qb, AND); }

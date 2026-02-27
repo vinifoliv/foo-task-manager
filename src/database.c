@@ -198,24 +198,17 @@ int db_list_tasks(List* list, Filter filter) {
 
   if (qb_init(&qb) != QB_OK) goto cleanup;
 
-  if (qb_clause(&qb, "SELECT * FROM task ") != QB_OK) goto cleanup;
+  qb_select(&qb, "*");
+  qb_from(&qb, "task");
 
   if (filter.done && filter.pending) {
     fprintf(stderr, "Cannot filter by done and pending at the same time.\n");
     goto cleanup;
   }
 
-  if (filter.done && qb_where(&qb, "finished = TRUE") != QB_OK) {
-    goto cleanup;
-  }
-
-  if (filter.pending && qb_where(&qb, "finished = FALSE") != QB_OK) {
-    goto cleanup;
-  }
-
-  if (filter.title && qb_where(&qb, "title LIKE '%' || ? || '%'") != QB_OK) {
-    goto cleanup;
-  }
+  if (filter.done) qb_where(&qb, "finished = TRUE");
+  if (filter.pending) qb_where(&qb, "finished = FALSE");
+  if (filter.title) qb_where(&qb, "title LIKE '%' || ? || '%'");
 
   sqlite3_stmt* stmt = NULL;
 

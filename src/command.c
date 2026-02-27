@@ -6,17 +6,7 @@
 
 #include "database.h"
 #include "task.h"
-
-static void print_tasks(const List* list) {
-  if (list->size == 0) printf("No tasks.\n");
-
-  for (size_t i = 0; i < list->size; ++i) {
-    Task* task = &list->items[i];
-
-    printf("- % 3d. [%c] %s\n", task->id, task->finished ? 'x' : ' ',
-           task->title);
-  }
-}
+#include "ui.h"
 
 int run_command(int argc, const char** argv) {
   if (argc == 1) {
@@ -80,7 +70,7 @@ int list(int argc, const char** argv) {
     return COMM_ERR_DATABASE;
   }
 
-  print_tasks(tasks);
+  display(tasks);
 
   destroy_list(tasks);
 

@@ -13,4 +13,5 @@ target_sources(foo PRIVATE
     src/database.c 
     src/query_builder.c
     src/sqlite3.c 
+    src/ui.c
 )

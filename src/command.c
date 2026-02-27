@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "database.h"
+#include "list.h"
 #include "task.h"
 #include "ui.h"
 
@@ -77,15 +78,17 @@ int list(int argc, const char** argv) {
     return COMM_ERR_INVALID_ARGS;
   }
 
-  List* tasks = create_list();
+  List tasks;
 
-  if (db_list_tasks(tasks, filter) != DB_OK) {
+  init_list(&tasks, sizeof(Task));
+
+  if (db_list_tasks(&tasks, filter) != DB_OK) {
     return COMM_ERR_DATABASE;
   }
 
-  display(tasks);
+  display(&tasks);
 
-  destroy_list(tasks);
+  destroy_list(&tasks);
 
   return COMM_OK;
 }

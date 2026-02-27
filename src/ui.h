@@ -1,7 +1,7 @@
 #ifndef UI_H
 #define UI_H
 
-#include "task.h"
+#include "list.h"
 
 void display(const List* list);
 

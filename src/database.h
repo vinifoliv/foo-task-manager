@@ -1,6 +1,7 @@
 #ifndef DATABASE_H
 #define DATABASE_H
 
+#include "list.h"
 #include "task.h"
 
 typedef enum {

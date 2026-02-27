@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "list.h"
 #include "query_builder.h"
 #include "sqlite3.h"
 #include "task.h"
@@ -16,7 +17,6 @@ static void finalize_stmt(sqlite3_stmt* stmt) {
 int db_init() {
   if (db) return DB_OK;
 
-  char* err = NULL;
   sqlite3_stmt* stmt = NULL;
   const char* sql =
       "CREATE TABLE IF NOT EXISTS task ("
@@ -193,10 +193,11 @@ cleanup:
   return status;
 }
 
-int db_list_tasks(List* tasks, Filter filter) {
+int db_list_tasks(List* list, Filter filter) {
   QueryBuilder qb;
 
   if (qb_init(&qb) != QB_OK) goto cleanup;
+
   if (qb_clause(&qb, "SELECT * FROM task ") != QB_OK) goto cleanup;
 
   if (filter.done && filter.pending) {
@@ -231,14 +232,13 @@ int db_list_tasks(List* tasks, Filter filter) {
   int rc;
 
   while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-    int id = sqlite3_column_int(stmt, 0);
+    Task task;
 
-    char title[TASK_TITLE_SIZE] = "";
-    strncpy(title, (char*)sqlite3_column_text(stmt, 1), TASK_TITLE_SIZE);
+    task.id = sqlite3_column_int(stmt, 0);
+    strncpy(task.title, (char*)sqlite3_column_text(stmt, 1), TASK_TITLE_SIZE);
+    task.finished = sqlite3_column_int(stmt, 3);
 
-    bool finished = sqlite3_column_int(stmt, 3);
-
-    add_to_list(tasks, id, title, finished);
+    append(list, &task);
   }
 
   if (rc != SQLITE_DONE) {
